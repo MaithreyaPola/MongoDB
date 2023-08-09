@@ -26,83 +26,63 @@ app.use(methodOverride('_method'))
 
 const categories = ["fruit", "vegetable"];
 
-app.get("/products", async (req, res) => {
-    try {
-        const { category } = req.query;
-        if (category) {
-            const products = await Product.find({ category });
-            res.render("index", { products, category });
-        } else {
-            const products = await Product.find({});
-            res.render("index", { products, category: "All" });
-        }
-    } catch (err) {
-        next(err);
+function catchAsync(fn) {
+    return function (req, res, next) {
+        fn(req, res, next).catch(err => next(err))
     }
-});
+}
+
+app.get("/products", catchAsync(async (req, res, next) => {
+    const { category } = req.query;
+    if (category) {
+        const products = await Product.find({ category });
+        res.render("index", { products, category });
+    } else {
+        const products = await Product.find({});
+        res.render("index", { products, category: "All" });
+    }
+}));
 
 app.get("/products/new", (req, res) => {
     res.render("create", { categories });
 });
 
-app.post("/products", async (req, res, next) => {
-    try {
-        const newProduct = new Product(req.body);
-        await newProduct.save();
-        res.redirect("/products");
-    }
-    catch (err) {
-        next(err);
-    }
-});
+app.post("/products", catchAsync(async (req, res, next) => {
+    const newProduct = new Product(req.body);
+    await newProduct.save();
+    res.redirect("/products");
+}));
 
-app.get("/products/:id", async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const product = await Product.findById(id);
-        // console.log(product);
-        if (!product) {
-            throw new AppError("Product not found", 404);
-        }
-        res.render("product", { product });
-    } catch (err) {
-        next(err);
+app.get("/products/:id", catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product) {
+        throw new AppError("Product not found", 404);
     }
-});
+    res.render("product", { product });
+}));
 
-app.delete("/products/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        const deletedProduct = await Product.findByIdAndDelete(id);
-        res.redirect("/products");
-    } catch (err) {
-        next(err);
-    }
-});
+app.delete("/products/:id", catchAsync(async (req, res) => {
+    const { id } = req.params;
+    await Product.findByIdAndDelete(id);
+    res.redirect("/products");
+}));
 
-app.get("/products/:id/edit", async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const product = await Product.findById(id);
-        if (!product) {
-            throw new AppError('product not found', 404);
-        }
-        res.render("edit", { product, categories });
-    } catch (err) {
-        next(err);
+app.get("/products/:id/edit", catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product) {
+        throw new AppError('product not found', 404);
     }
-});
+    res.render("edit", { product, categories });
+}));
 
-app.put("/products/:id/edit", async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const product = await Product.findByIdAndUpdate(id, req.body, { runValidators: true });
-        await product.save();
-        res.redirect("/products/" + id);
-    } catch (err) {
-        next(err);
-    }
-});
+app.put("/products/:id/edit", catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const product = await Product.findByIdAndUpdate(id, req.body, { runValidators: true });
+    await product.save();
+    res.redirect("/products/" + id);
+}));
 
 app.use((err, req, res, next) => {
     const { status = 401, message = "Invalid" } = err;
