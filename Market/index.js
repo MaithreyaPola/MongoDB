@@ -80,19 +80,23 @@ app.delete("/products/:id", async (req, res) => {
     }
 });
 
-app.get("/products/:id/edit", async (req, res) => {
-    const { id } = req.params;
-    const product = await Product.findById(id);
-    res.render("edit", { product, categories });
+app.get("/products/:id/edit", async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const product = await Product.findById(id);
+        if (!product) {
+            throw new AppError('product not found', 404);
+        }
+        res.render("edit", { product, categories });
+    } catch (err) {
+        next(err);
+    }
 });
 
 app.put("/products/:id/edit", async (req, res, next) => {
     try {
         const { id } = req.params;
         const product = await Product.findByIdAndUpdate(id, req.body, { runValidators: true });
-        if (!product) {
-            throw new AppError("Product id not found");
-        }
         await product.save();
         res.redirect("/products/" + id);
     } catch (err) {
